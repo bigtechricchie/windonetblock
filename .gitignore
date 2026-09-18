@@ -1,0 +1,21 @@
+# WindoNetBlock build output
+windonetblock.exe
+
+# Go test/build artifacts
+*.test
+*.out
+
+# Coverage output
+coverage.out
+
+# Local temporary files
+*.tmp
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+
+# IDE/editor local state
+.vscode/
+.idea/
