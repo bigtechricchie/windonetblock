@@ -20,9 +20,14 @@ type ProcessInfo struct {
 	ExecutablePath string
 }
 
+type ProcessSnapshotEntry struct {
+	PID       uint32
+	ParentPID uint32
+	Name      string
+}
+
 func inspectCurrentProcess() (ProcessInfo, error) {
 	pid := currentProcessID()
-
 	handle := currentProcessHandle()
 
 	executablePath, err := processExecutablePath(handle)
@@ -70,4 +75,53 @@ func processExecutablePath(handle syscall.Handle) (string, error) {
 	}
 
 	return syscall.UTF16ToString(buffer[:size]), nil
+}
+
+func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
+	snapshot, err := syscall.CreateToolhelp32Snapshot(
+		syscall.TH32CS_SNAPPROCESS,
+		0,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("create process snapshot: %w", err)
+	}
+
+	defer func() {
+		closeErr := syscall.CloseHandle(snapshot)
+		if err == nil && closeErr != nil {
+			err = fmt.Errorf("close process snapshot: %w", closeErr)
+		}
+	}()
+
+	var entry syscall.ProcessEntry32
+	entry.Size = uint32(unsafe.Sizeof(entry))
+
+	if err := syscall.Process32First(snapshot, &entry); err != nil {
+		if errors.Is(err, syscall.ERROR_NO_MORE_FILES) {
+			return processes, nil
+		}
+
+		return nil, fmt.Errorf("read first process snapshot entry: %w", err)
+	}
+
+	for {
+		processes = append(processes, ProcessSnapshotEntry{
+			PID:       entry.ProcessID,
+			ParentPID: entry.ParentProcessID,
+			Name:      syscall.UTF16ToString(entry.ExeFile[:]),
+		})
+
+		err := syscall.Process32Next(snapshot, &entry)
+		if err == nil {
+			continue
+		}
+
+		if errors.Is(err, syscall.ERROR_NO_MORE_FILES) {
+			break
+		}
+
+		return nil, fmt.Errorf("read next process snapshot entry: %w", err)
+	}
+
+	return processes, nil
 }

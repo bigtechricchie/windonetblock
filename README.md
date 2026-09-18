@@ -4,6 +4,8 @@
 
 WindoNetBlock is a Go-based Windows security tool for application-aware network control, process visibility, and auditable allow/block policies.
 
+Built by Edward Siwek.
+
 ## Status
 
 WindoNetBlock is under active development.
@@ -28,6 +30,21 @@ A valid digital signature does not prove that software is safe, and unsigned sof
 
 ## Current state
 
-Project foundation only.
+WindoNetBlock can currently:
 
-No process monitoring, network monitoring, policy enforcement, firewall modification, privileged service, or graphical interface has been implemented yet.
+- inspect its own process ID and executable path;
+- take a Windows process snapshot;
+- enumerate current process IDs, parent process IDs, and executable names.
+
+This is observation only.
+
+WindoNetBlock does not currently provide:
+
+- continuous process monitoring;
+- executable signature verification;
+- SHA-256 executable identity;
+- network monitoring;
+- policy enforcement;
+- firewall modification;
+- a privileged service;
+- a graphical interface.
