@@ -50,9 +50,25 @@ func main() {
 
 		if process.PathError != nil {
 			fmt.Printf("  Path: <unavailable: %v>\n", process.PathError)
+		} else {
+			fmt.Printf("  Path: %s\n", process.ExecutablePath)
+		}
+
+		if process.SecurityError != nil {
+			fmt.Printf("  Security: <unavailable: %v>\n", process.SecurityError)
 			continue
 		}
 
-		fmt.Printf("  Path: %s\n", process.ExecutablePath)
+		fmt.Printf("  User SID: %s\n", process.Security.UserSID)
+
+		if process.Security.Account != "" {
+			fmt.Printf("  Account: %s\n", process.Security.Account)
+		}
+
+		fmt.Printf(
+			"  Integrity: %s (0x%X)\n",
+			process.Security.Integrity,
+			process.Security.IntegrityRID,
+		)
 	}
 }
