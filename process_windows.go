@@ -21,6 +21,7 @@ var (
 type ProcessInfo struct {
 	PID              uint32
 	ExecutablePath   string
+	FileIdentity     ExecutableFileIdentity
 	ExecutableSHA256 string
 	Signature        ExecutableSignatureEvidence
 	Security         ProcessSecurityContext
@@ -49,6 +50,11 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 		return ProcessInfo{}, fmt.Errorf("query executable path: %w", err)
 	}
 
+	fileIdentity, err := executableFileIdentity(executablePath)
+	if err != nil {
+		return ProcessInfo{}, fmt.Errorf("query executable file identity: %w", err)
+	}
+
 	executableSHA256, err := hashFileSHA256(executablePath)
 	if err != nil {
 		return ProcessInfo{}, fmt.Errorf("hash executable: %w", err)
@@ -67,6 +73,7 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 	return ProcessInfo{
 		PID:              pid,
 		ExecutablePath:   executablePath,
+		FileIdentity:     fileIdentity,
 		ExecutableSHA256: executableSHA256,
 		Signature:        signatureEvidence,
 		Security:         securityContext,
