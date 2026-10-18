@@ -40,12 +40,13 @@ WindoNetBlock can currently:
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
 - resolve full executable paths where Windows permits access;
+- retrieve per-process Windows file identity where the executable file is accessible;
 - calculate per-process executable SHA-256 evidence where the executable file is readable;
 - reuse SHA-256 results within a single snapshot when the observed path, file size, and last-write time are unchanged;
 - verify per-process executable Authenticode status where the executable file is accessible;
 - reuse Authenticode evidence within a single snapshot when the observed path, file size, and last-write time are unchanged;
 - inspect per-process user SID, account name, and mandatory integrity level where Windows permits access;
-- preserve process snapshot information when path, hash, signature, or security-context inspection is unavailable.
+- preserve process snapshot information when path, identity, hash, signature, or security-context inspection is unavailable.
 
 This is observation only.
 
@@ -62,7 +63,6 @@ Authenticode evidence is cached only for one process snapshot using the observed
 WindoNetBlock does not currently provide:
 
 - continuous process monitoring;
-- per-process Windows file identity;
 - signer or publisher certificate extraction;
 - online revocation checking;
 - persistent executable hash or signature caching;

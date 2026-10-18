@@ -61,6 +61,12 @@ func main() {
 			fmt.Printf("  Path: %s\n", process.ExecutablePath)
 		}
 
+		if process.IdentityError != nil {
+			fmt.Printf("  File identity: <unavailable: %v>\n", process.IdentityError)
+		} else if process.FileIdentity != (ExecutableFileIdentity{}) {
+			fmt.Printf("  File identity: %s\n", process.FileIdentity)
+		}
+
 		if process.HashError != nil {
 			fmt.Printf("  SHA-256: <unavailable: %v>\n", process.HashError)
 		} else if process.ExecutableSHA256 != "" {

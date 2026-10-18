@@ -33,6 +33,8 @@ type ProcessSnapshotEntry struct {
 	Name             string
 	ExecutablePath   string
 	PathError        error
+	FileIdentity     ExecutableFileIdentity
+	IdentityError    error
 	ExecutableSHA256 string
 	HashError        error
 	Signature        ExecutableSignatureEvidence
@@ -183,6 +185,13 @@ func inspectSnapshotEntry(
 		process.PathError = err
 	} else {
 		process.ExecutablePath = executablePath
+
+		fileIdentity, identityErr := executableFileIdentity(executablePath)
+		if identityErr != nil {
+			process.IdentityError = identityErr
+		} else {
+			process.FileIdentity = fileIdentity
+		}
 
 		executableSHA256, hashErr := hashCache.SHA256(executablePath)
 		if hashErr != nil {
