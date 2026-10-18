@@ -19,6 +19,17 @@ func main() {
 	fmt.Println("---------------")
 	fmt.Printf("PID: %d\n", currentProcess.PID)
 	fmt.Printf("Executable: %s\n", currentProcess.ExecutablePath)
+	fmt.Printf("User SID: %s\n", currentProcess.Security.UserSID)
+
+	if currentProcess.Security.Account != "" {
+		fmt.Printf("Account: %s\n", currentProcess.Security.Account)
+	}
+
+	fmt.Printf(
+		"Integrity: %s (0x%X)\n",
+		currentProcess.Security.Integrity,
+		currentProcess.Security.IntegrityRID,
+	)
 	fmt.Println()
 
 	processes, err := enumerateProcesses()

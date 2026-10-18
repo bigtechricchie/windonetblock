@@ -21,6 +21,7 @@ var (
 type ProcessInfo struct {
 	PID            uint32
 	ExecutablePath string
+	Security       ProcessSecurityContext
 }
 
 type ProcessSnapshotEntry struct {
@@ -40,9 +41,15 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 		return ProcessInfo{}, fmt.Errorf("query executable path: %w", err)
 	}
 
+	securityContext, err := inspectCurrentProcessSecurity()
+	if err != nil {
+		return ProcessInfo{}, fmt.Errorf("inspect security context: %w", err)
+	}
+
 	return ProcessInfo{
 		PID:            pid,
 		ExecutablePath: executablePath,
+		Security:       securityContext,
 	}, nil
 }
 
