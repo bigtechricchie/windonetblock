@@ -66,6 +66,16 @@ func main() {
 			fmt.Printf("  SHA-256: %s\n", process.ExecutableSHA256)
 		}
 
+		if process.SignatureError != nil {
+			fmt.Printf("  Authenticode: <unavailable: %v>\n", process.SignatureError)
+		} else if process.Signature.Status != "" {
+			fmt.Printf(
+				"  Authenticode: %s (offline, 0x%08X)\n",
+				process.Signature.Status,
+				process.Signature.StatusCode,
+			)
+		}
+
 		if process.SecurityError != nil {
 			fmt.Printf("  Security: <unavailable: %v>\n", process.SecurityError)
 			continue
