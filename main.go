@@ -55,6 +55,12 @@ func main() {
 			fmt.Printf("  Path: %s\n", process.ExecutablePath)
 		}
 
+		if process.HashError != nil {
+			fmt.Printf("  SHA-256: <unavailable: %v>\n", process.HashError)
+		} else if process.ExecutableSHA256 != "" {
+			fmt.Printf("  SHA-256: %s\n", process.ExecutableSHA256)
+		}
+
 		if process.SecurityError != nil {
 			fmt.Printf("  Security: <unavailable: %v>\n", process.SecurityError)
 			continue
