@@ -22,6 +22,7 @@ type ProcessInfo struct {
 	PID              uint32
 	ExecutablePath   string
 	ExecutableSHA256 string
+	Signature        ExecutableSignatureEvidence
 	Security         ProcessSecurityContext
 }
 
@@ -51,6 +52,11 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 		return ProcessInfo{}, fmt.Errorf("hash executable: %w", err)
 	}
 
+	signatureEvidence, err := verifyAuthenticodeOffline(executablePath)
+	if err != nil {
+		return ProcessInfo{}, fmt.Errorf("verify executable signature: %w", err)
+	}
+
 	securityContext, err := inspectProcessSecurity(handle)
 	if err != nil {
 		return ProcessInfo{}, fmt.Errorf("inspect security context: %w", err)
@@ -60,6 +66,7 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 		PID:              pid,
 		ExecutablePath:   executablePath,
 		ExecutableSHA256: executableSHA256,
+		Signature:        signatureEvidence,
 		Security:         securityContext,
 	}, nil
 }

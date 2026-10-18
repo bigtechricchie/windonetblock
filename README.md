@@ -34,6 +34,7 @@ WindoNetBlock can currently:
 
 - inspect its own process ID and executable path;
 - calculate a SHA-256 digest for the file currently found at its observed executable path;
+- verify the current executable with the Windows Authenticode policy provider without network retrieval;
 - inspect its current Windows user SID, account name, and mandatory integrity level;
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
@@ -49,10 +50,14 @@ A SHA-256 value identifies the file content read from an observed executable pat
 
 The current hash cache exists only for one process snapshot and uses the observed path, file size, and last-write time to avoid redundant hashing. It is not a durable file-identity mechanism.
 
+The current Authenticode check uses the Windows software-publisher trust policy with UI disabled and cache-only URL retrieval. A `Trusted` result means Windows accepted the file for that policy using locally available trust information. It does not mean that WindoNetBlock has established that the software is safe. `Unsigned` and `Not trusted` are kept distinct, and the raw WinVerifyTrust status code is retained.
+
 WindoNetBlock does not currently provide:
 
 - continuous process monitoring;
-- executable signature verification;
+- per-process executable signature verification;
+- signer or publisher certificate extraction;
+- online revocation checking;
 - persistent executable hash caching;
 - Windows file-identity validation for cached executable evidence;
 - network monitoring;
