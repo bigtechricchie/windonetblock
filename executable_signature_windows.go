@@ -3,9 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"os"
 	"syscall"
-	"time"
 	"unsafe"
 )
 
@@ -46,14 +44,8 @@ type ExecutableSignatureEvidence struct {
 	StatusCode uint32
 }
 
-type executableSignatureCacheKey struct {
-	Path             string
-	Size             int64
-	ModificationTime time.Time
-}
-
 type executableSignatureCache struct {
-	entries map[executableSignatureCacheKey]ExecutableSignatureEvidence
+	entries map[ExecutableFileState]ExecutableSignatureEvidence
 	verify  func(string) (ExecutableSignatureEvidence, error)
 }
 
@@ -82,7 +74,7 @@ type winTrustFileInfo struct {
 
 func newExecutableSignatureCache() *executableSignatureCache {
 	return &executableSignatureCache{
-		entries: make(map[executableSignatureCacheKey]ExecutableSignatureEvidence),
+		entries: make(map[ExecutableFileState]ExecutableSignatureEvidence),
 		verify:  verifyAuthenticodeOffline,
 	}
 }
@@ -90,21 +82,15 @@ func newExecutableSignatureCache() *executableSignatureCache {
 func (cache *executableSignatureCache) Verify(
 	path string,
 ) (ExecutableSignatureEvidence, error) {
-	before, err := os.Stat(path)
+	before, err := executableFileState(path)
 	if err != nil {
 		return ExecutableSignatureEvidence{}, fmt.Errorf(
-			"stat file before signature verification: %w",
+			"inspect file before signature verification: %w",
 			err,
 		)
 	}
 
-	key := executableSignatureCacheKey{
-		Path:             path,
-		Size:             before.Size(),
-		ModificationTime: before.ModTime(),
-	}
-
-	if evidence, ok := cache.entries[key]; ok {
+	if evidence, ok := cache.entries[before]; ok {
 		return evidence, nil
 	}
 
@@ -113,21 +99,21 @@ func (cache *executableSignatureCache) Verify(
 		return ExecutableSignatureEvidence{}, err
 	}
 
-	after, err := os.Stat(path)
+	after, err := executableFileState(path)
 	if err != nil {
 		return ExecutableSignatureEvidence{}, fmt.Errorf(
-			"stat file after signature verification: %w",
+			"inspect file after signature verification: %w",
 			err,
 		)
 	}
 
-	if before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+	if before != after {
 		return ExecutableSignatureEvidence{}, errors.New(
 			"file changed during signature verification",
 		)
 	}
 
-	cache.entries[key] = evidence
+	cache.entries[before] = evidence
 	return evidence, nil
 }
 

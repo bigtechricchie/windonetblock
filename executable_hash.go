@@ -7,40 +7,27 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 )
 
-type executableHashCacheKey struct {
-	Path             string
-	Size             int64
-	ModificationTime time.Time
-}
-
 type executableHashCache struct {
-	entries map[executableHashCacheKey]string
+	entries map[ExecutableFileState]string
 	hash    func(string) (string, error)
 }
 
 func newExecutableHashCache() *executableHashCache {
 	return &executableHashCache{
-		entries: make(map[executableHashCacheKey]string),
+		entries: make(map[ExecutableFileState]string),
 		hash:    hashFileSHA256,
 	}
 }
 
 func (cache *executableHashCache) SHA256(path string) (string, error) {
-	before, err := os.Stat(path)
+	before, err := executableFileState(path)
 	if err != nil {
-		return "", fmt.Errorf("stat file before hashing: %w", err)
+		return "", fmt.Errorf("inspect file before hashing: %w", err)
 	}
 
-	key := executableHashCacheKey{
-		Path:             path,
-		Size:             before.Size(),
-		ModificationTime: before.ModTime(),
-	}
-
-	if hash, ok := cache.entries[key]; ok {
+	if hash, ok := cache.entries[before]; ok {
 		return hash, nil
 	}
 
@@ -49,16 +36,16 @@ func (cache *executableHashCache) SHA256(path string) (string, error) {
 		return "", err
 	}
 
-	after, err := os.Stat(path)
+	after, err := executableFileState(path)
 	if err != nil {
-		return "", fmt.Errorf("stat file after hashing: %w", err)
+		return "", fmt.Errorf("inspect file after hashing: %w", err)
 	}
 
-	if before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+	if before != after {
 		return "", errors.New("file changed while hashing")
 	}
 
-	cache.entries[key] = hash
+	cache.entries[before] = hash
 	return hash, nil
 }
 

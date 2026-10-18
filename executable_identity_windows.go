@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -17,6 +18,12 @@ var procGetFileInformationByHandleEx = kernel32.NewProc(
 type ExecutableFileIdentity struct {
 	VolumeSerialNumber uint64
 	FileID             [16]byte
+}
+
+type ExecutableFileState struct {
+	Identity         ExecutableFileIdentity
+	Size             int64
+	ModificationTime time.Time
 }
 
 type fileIDInfo struct {
@@ -33,9 +40,18 @@ func (identity ExecutableFileIdentity) String() string {
 }
 
 func executableFileIdentity(path string) (identity ExecutableFileIdentity, err error) {
+	state, err := executableFileState(path)
+	if err != nil {
+		return ExecutableFileIdentity{}, err
+	}
+
+	return state.Identity, nil
+}
+
+func executableFileState(path string) (state ExecutableFileState, err error) {
 	file, err := os.Open(path)
 	if err != nil {
-		return ExecutableFileIdentity{}, fmt.Errorf("open file: %w", err)
+		return ExecutableFileState{}, fmt.Errorf("open file: %w", err)
 	}
 
 	defer func() {
@@ -45,26 +61,35 @@ func executableFileIdentity(path string) (identity ExecutableFileIdentity, err e
 		}
 	}()
 
-	var info fileIDInfo
+	info, err := file.Stat()
+	if err != nil {
+		return ExecutableFileState{}, fmt.Errorf("stat file: %w", err)
+	}
+
+	var fileIdentityInfo fileIDInfo
 
 	result, _, callErr := procGetFileInformationByHandleEx.Call(
 		file.Fd(),
 		fileIDInfoClass,
-		uintptr(unsafe.Pointer(&info)),
-		unsafe.Sizeof(info),
+		uintptr(unsafe.Pointer(&fileIdentityInfo)),
+		unsafe.Sizeof(fileIdentityInfo),
 	)
 	if result == 0 {
 		if callErr == syscall.Errno(0) {
-			return ExecutableFileIdentity{}, fmt.Errorf(
+			return ExecutableFileState{}, fmt.Errorf(
 				"GetFileInformationByHandleEx failed",
 			)
 		}
 
-		return ExecutableFileIdentity{}, callErr
+		return ExecutableFileState{}, callErr
 	}
 
-	return ExecutableFileIdentity{
-		VolumeSerialNumber: info.VolumeSerialNumber,
-		FileID:             info.FileID,
+	return ExecutableFileState{
+		Identity: ExecutableFileIdentity{
+			VolumeSerialNumber: fileIdentityInfo.VolumeSerialNumber,
+			FileID:             fileIdentityInfo.FileID,
+		},
+		Size:             info.Size(),
+		ModificationTime: info.ModTime(),
 	}, nil
 }
