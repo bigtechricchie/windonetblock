@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -15,14 +18,14 @@ const (
 )
 
 const (
-	trustENoSignature            uint32 = 0x800B0100
-	wtdCacheOnlyURLRetrieval     uint32 = 0x00001000
-	wtdChoiceFile                uint32 = 1
-	wtdDisableMD2MD4             uint32 = 0x00002000
-	wtdRevokeNone                uint32 = 0
-	wtdStateActionIgnore         uint32 = 0
-	wtdUIContextExecute          uint32 = 0
-	wtdUINone                    uint32 = 2
+	trustENoSignature        uint32 = 0x800B0100
+	wtdCacheOnlyURLRetrieval uint32 = 0x00001000
+	wtdChoiceFile            uint32 = 1
+	wtdDisableMD2MD4         uint32 = 0x00002000
+	wtdRevokeNone            uint32 = 0
+	wtdStateActionIgnore     uint32 = 0
+	wtdUIContextExecute      uint32 = 0
+	wtdUINone                uint32 = 2
 )
 
 var (
@@ -41,6 +44,17 @@ var winTrustActionGenericVerifyV2 = syscall.GUID{
 type ExecutableSignatureEvidence struct {
 	Status     ExecutableSignatureStatus
 	StatusCode uint32
+}
+
+type executableSignatureCacheKey struct {
+	Path             string
+	Size             int64
+	ModificationTime time.Time
+}
+
+type executableSignatureCache struct {
+	entries map[executableSignatureCacheKey]ExecutableSignatureEvidence
+	verify  func(string) (ExecutableSignatureEvidence, error)
 }
 
 type winTrustData struct {
@@ -64,6 +78,57 @@ type winTrustFileInfo struct {
 	FilePath     *uint16
 	File         syscall.Handle
 	KnownSubject *syscall.GUID
+}
+
+func newExecutableSignatureCache() *executableSignatureCache {
+	return &executableSignatureCache{
+		entries: make(map[executableSignatureCacheKey]ExecutableSignatureEvidence),
+		verify:  verifyAuthenticodeOffline,
+	}
+}
+
+func (cache *executableSignatureCache) Verify(
+	path string,
+) (ExecutableSignatureEvidence, error) {
+	before, err := os.Stat(path)
+	if err != nil {
+		return ExecutableSignatureEvidence{}, fmt.Errorf(
+			"stat file before signature verification: %w",
+			err,
+		)
+	}
+
+	key := executableSignatureCacheKey{
+		Path:             path,
+		Size:             before.Size(),
+		ModificationTime: before.ModTime(),
+	}
+
+	if evidence, ok := cache.entries[key]; ok {
+		return evidence, nil
+	}
+
+	evidence, err := cache.verify(path)
+	if err != nil {
+		return ExecutableSignatureEvidence{}, err
+	}
+
+	after, err := os.Stat(path)
+	if err != nil {
+		return ExecutableSignatureEvidence{}, fmt.Errorf(
+			"stat file after signature verification: %w",
+			err,
+		)
+	}
+
+	if before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) {
+		return ExecutableSignatureEvidence{}, errors.New(
+			"file changed during signature verification",
+		)
+	}
+
+	cache.entries[key] = evidence
+	return evidence, nil
 }
 
 func verifyAuthenticodeOffline(path string) (ExecutableSignatureEvidence, error) {

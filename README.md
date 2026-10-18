@@ -41,8 +41,10 @@ WindoNetBlock can currently:
 - resolve full executable paths where Windows permits access;
 - calculate per-process executable SHA-256 evidence where the executable file is readable;
 - reuse SHA-256 results within a single snapshot when the observed path, file size, and last-write time are unchanged;
+- verify per-process executable Authenticode status where the executable file is accessible;
+- reuse Authenticode evidence within a single snapshot when the observed path, file size, and last-write time are unchanged;
 - inspect per-process user SID, account name, and mandatory integrity level where Windows permits access;
-- preserve process snapshot information when path, hash, or security-context inspection is unavailable.
+- preserve process snapshot information when path, hash, signature, or security-context inspection is unavailable.
 
 This is observation only.
 
@@ -50,15 +52,16 @@ A SHA-256 value identifies the file content read from an observed executable pat
 
 The current hash cache exists only for one process snapshot and uses the observed path, file size, and last-write time to avoid redundant hashing. It is not a durable file-identity mechanism.
 
-The current Authenticode check uses the Windows software-publisher trust policy with UI disabled and cache-only URL retrieval. A `Trusted` result means Windows accepted the file for that policy using locally available trust information. It does not mean that WindoNetBlock has established that the software is safe. `Unsigned` and `Not trusted` are kept distinct, and the raw WinVerifyTrust status code is retained.
+The current Authenticode checks use the Windows software-publisher trust policy with UI disabled and cache-only URL retrieval. A `Trusted` result means Windows accepted the file for that policy using locally available trust information. It does not mean that WindoNetBlock has established that the software is safe. `Unsigned` and `Not trusted` are kept distinct, and the raw WinVerifyTrust status code is retained.
+
+Authenticode evidence is cached only for one process snapshot using the observed path, file size, and last-write time. It is not persistent trust state and is discarded after the snapshot completes.
 
 WindoNetBlock does not currently provide:
 
 - continuous process monitoring;
-- per-process executable signature verification;
 - signer or publisher certificate extraction;
 - online revocation checking;
-- persistent executable hash caching;
+- persistent executable hash or signature caching;
 - Windows file-identity validation for cached executable evidence;
 - network monitoring;
 - policy enforcement;

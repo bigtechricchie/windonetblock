@@ -34,6 +34,8 @@ type ProcessSnapshotEntry struct {
 	PathError        error
 	ExecutableSHA256 string
 	HashError        error
+	Signature        ExecutableSignatureEvidence
+	SignatureError   error
 	Security         ProcessSecurityContext
 	SecurityError    error
 }
@@ -124,6 +126,7 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	}()
 
 	hashCache := newExecutableHashCache()
+	signatureCache := newExecutableSignatureCache()
 
 	var entry syscall.ProcessEntry32
 	entry.Size = uint32(unsafe.Sizeof(entry))
@@ -137,7 +140,10 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	}
 
 	for {
-		processes = append(processes, inspectSnapshotEntry(entry, hashCache))
+		processes = append(
+			processes,
+			inspectSnapshotEntry(entry, hashCache, signatureCache),
+		)
 
 		err := syscall.Process32Next(snapshot, &entry)
 		if err == nil {
@@ -157,6 +163,7 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 func inspectSnapshotEntry(
 	entry syscall.ProcessEntry32,
 	hashCache *executableHashCache,
+	signatureCache *executableSignatureCache,
 ) ProcessSnapshotEntry {
 	process := ProcessSnapshotEntry{
 		PID:       entry.ProcessID,
@@ -175,6 +182,13 @@ func inspectSnapshotEntry(
 			process.HashError = hashErr
 		} else {
 			process.ExecutableSHA256 = executableSHA256
+		}
+
+		signatureEvidence, signatureErr := signatureCache.Verify(executablePath)
+		if signatureErr != nil {
+			process.SignatureError = signatureErr
+		} else {
+			process.Signature = signatureEvidence
 		}
 	}
 
