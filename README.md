@@ -33,6 +33,7 @@ A valid digital signature does not prove that software is safe, and unsigned sof
 WindoNetBlock can currently:
 
 - inspect its own process ID and executable path;
+- inspect its current Windows user SID, account name, and mandatory integrity level;
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
 - resolve full executable paths where Windows permits access;
@@ -42,6 +43,7 @@ This is observation only.
 
 WindoNetBlock does not currently provide:
 
+- per-process security-context inspection;
 - continuous process monitoring;
 - executable signature verification;
 - SHA-256 executable identity;
