@@ -19,6 +19,7 @@ func main() {
 	fmt.Println("---------------")
 	fmt.Printf("PID: %d\n", currentProcess.PID)
 	fmt.Printf("Executable: %s\n", currentProcess.ExecutablePath)
+	fmt.Printf("SHA-256: %s\n", currentProcess.ExecutableSHA256)
 	fmt.Printf("User SID: %s\n", currentProcess.Security.UserSID)
 
 	if currentProcess.Security.Account != "" {

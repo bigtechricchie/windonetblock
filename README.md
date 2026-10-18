@@ -33,6 +33,7 @@ A valid digital signature does not prove that software is safe, and unsigned sof
 WindoNetBlock can currently:
 
 - inspect its own process ID and executable path;
+- calculate a SHA-256 digest for the file currently found at its observed executable path;
 - inspect its current Windows user SID, account name, and mandatory integrity level;
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
@@ -42,11 +43,14 @@ WindoNetBlock can currently:
 
 This is observation only.
 
+The SHA-256 value identifies the file content read from the observed executable path at inspection time. It does not by itself prove publisher identity, trustworthiness, or that the file could not change before or after inspection.
+
 WindoNetBlock does not currently provide:
 
 - continuous process monitoring;
 - executable signature verification;
-- SHA-256 executable identity;
+- per-process executable SHA-256 evidence;
+- executable hash caching or file-identity validation;
 - network monitoring;
 - policy enforcement;
 - firewall modification;
