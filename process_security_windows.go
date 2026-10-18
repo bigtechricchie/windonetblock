@@ -12,13 +12,13 @@ import (
 type IntegrityLevel string
 
 const (
-	IntegrityHigh       IntegrityLevel = "High"
-	IntegrityLow        IntegrityLevel = "Low"
-	IntegrityMedium     IntegrityLevel = "Medium"
-	IntegrityProtected  IntegrityLevel = "Protected"
-	IntegritySystem     IntegrityLevel = "System"
-	IntegrityUnknown    IntegrityLevel = "Unknown"
-	IntegrityUntrusted  IntegrityLevel = "Untrusted"
+	IntegrityHigh      IntegrityLevel = "High"
+	IntegrityLow       IntegrityLevel = "Low"
+	IntegrityMedium    IntegrityLevel = "Medium"
+	IntegrityProtected IntegrityLevel = "Protected"
+	IntegritySystem    IntegrityLevel = "System"
+	IntegrityUnknown   IntegrityLevel = "Unknown"
+	IntegrityUntrusted IntegrityLevel = "Untrusted"
 )
 
 type ProcessSecurityContext struct {
@@ -32,16 +32,21 @@ type tokenMandatoryLabel struct {
 	Label syscall.SIDAndAttributes
 }
 
-func inspectCurrentProcessSecurity() (context ProcessSecurityContext, err error) {
-	token, err := syscall.OpenCurrentProcessToken()
-	if err != nil {
-		return ProcessSecurityContext{}, fmt.Errorf("open current process token: %w", err)
+func inspectProcessSecurity(process syscall.Handle) (context ProcessSecurityContext, err error) {
+	var token syscall.Token
+
+	if err := syscall.OpenProcessToken(
+		process,
+		syscall.TOKEN_QUERY,
+		&token,
+	); err != nil {
+		return ProcessSecurityContext{}, fmt.Errorf("open process token: %w", err)
 	}
 
 	defer func() {
 		closeErr := token.Close()
 		if err == nil && closeErr != nil {
-			err = fmt.Errorf("close current process token: %w", closeErr)
+			err = fmt.Errorf("close process token: %w", closeErr)
 		}
 	}()
 
@@ -77,6 +82,31 @@ func inspectCurrentProcessSecurity() (context ProcessSecurityContext, err error)
 
 	context.Integrity = integrity
 	context.IntegrityRID = rid
+
+	return context, nil
+}
+
+func securityContextForPID(pid uint32) (context ProcessSecurityContext, err error) {
+	handle, err := openProcessForQuery(pid)
+	if err != nil {
+		return ProcessSecurityContext{}, fmt.Errorf("open process %d: %w", pid, err)
+	}
+
+	defer func() {
+		closeErr := syscall.CloseHandle(handle)
+		if err == nil && closeErr != nil {
+			err = fmt.Errorf("close process %d handle: %w", pid, closeErr)
+		}
+	}()
+
+	context, err = inspectProcessSecurity(handle)
+	if err != nil {
+		return ProcessSecurityContext{}, fmt.Errorf(
+			"inspect process %d security context: %w",
+			pid,
+			err,
+		)
+	}
 
 	return context, nil
 }

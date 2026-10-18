@@ -30,6 +30,8 @@ type ProcessSnapshotEntry struct {
 	Name           string
 	ExecutablePath string
 	PathError      error
+	Security       ProcessSecurityContext
+	SecurityError  error
 }
 
 func inspectCurrentProcess() (ProcessInfo, error) {
@@ -41,7 +43,7 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 		return ProcessInfo{}, fmt.Errorf("query executable path: %w", err)
 	}
 
-	securityContext, err := inspectCurrentProcessSecurity()
+	securityContext, err := inspectProcessSecurity(handle)
 	if err != nil {
 		return ProcessInfo{}, fmt.Errorf("inspect security context: %w", err)
 	}
@@ -144,10 +146,17 @@ func inspectSnapshotEntry(entry syscall.ProcessEntry32) ProcessSnapshotEntry {
 	executablePath, err := executablePathForPID(entry.ProcessID)
 	if err != nil {
 		process.PathError = err
-		return process
+	} else {
+		process.ExecutablePath = executablePath
 	}
 
-	process.ExecutablePath = executablePath
+	securityContext, err := securityContextForPID(entry.ProcessID)
+	if err != nil {
+		process.SecurityError = err
+	} else {
+		process.Security = securityContext
+	}
+
 	return process
 }
 

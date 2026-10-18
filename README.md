@@ -37,13 +37,13 @@ WindoNetBlock can currently:
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
 - resolve full executable paths where Windows permits access;
-- preserve process snapshot information when executable-path inspection is unavailable.
+- inspect per-process user SID, account name, and mandatory integrity level where Windows permits access;
+- preserve process snapshot information when path or security-context inspection is unavailable.
 
 This is observation only.
 
 WindoNetBlock does not currently provide:
 
-- per-process security-context inspection;
 - continuous process monitoring;
 - executable signature verification;
 - SHA-256 executable identity;
