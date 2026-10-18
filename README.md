@@ -38,19 +38,23 @@ WindoNetBlock can currently:
 - take a Windows process snapshot;
 - enumerate current process IDs, parent process IDs, and executable names;
 - resolve full executable paths where Windows permits access;
+- calculate per-process executable SHA-256 evidence where the executable file is readable;
+- reuse SHA-256 results within a single snapshot when the observed path, file size, and last-write time are unchanged;
 - inspect per-process user SID, account name, and mandatory integrity level where Windows permits access;
-- preserve process snapshot information when path or security-context inspection is unavailable.
+- preserve process snapshot information when path, hash, or security-context inspection is unavailable.
 
 This is observation only.
 
-The SHA-256 value identifies the file content read from the observed executable path at inspection time. It does not by itself prove publisher identity, trustworthiness, or that the file could not change before or after inspection.
+A SHA-256 value identifies the file content read from an observed executable path at inspection time. It does not by itself prove publisher identity, trustworthiness, or that the file could not change before or after inspection.
+
+The current hash cache exists only for one process snapshot and uses the observed path, file size, and last-write time to avoid redundant hashing. It is not a durable file-identity mechanism.
 
 WindoNetBlock does not currently provide:
 
 - continuous process monitoring;
 - executable signature verification;
-- per-process executable SHA-256 evidence;
-- executable hash caching or file-identity validation;
+- persistent executable hash caching;
+- Windows file-identity validation for cached executable evidence;
 - network monitoring;
 - policy enforcement;
 - firewall modification;

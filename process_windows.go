@@ -26,13 +26,15 @@ type ProcessInfo struct {
 }
 
 type ProcessSnapshotEntry struct {
-	PID            uint32
-	ParentPID      uint32
-	Name           string
-	ExecutablePath string
-	PathError      error
-	Security       ProcessSecurityContext
-	SecurityError  error
+	PID              uint32
+	ParentPID        uint32
+	Name             string
+	ExecutablePath   string
+	PathError        error
+	ExecutableSHA256 string
+	HashError        error
+	Security         ProcessSecurityContext
+	SecurityError    error
 }
 
 func inspectCurrentProcess() (ProcessInfo, error) {
@@ -114,6 +116,8 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 		}
 	}()
 
+	hashCache := newExecutableHashCache()
+
 	var entry syscall.ProcessEntry32
 	entry.Size = uint32(unsafe.Sizeof(entry))
 
@@ -126,7 +130,7 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	}
 
 	for {
-		processes = append(processes, inspectSnapshotEntry(entry))
+		processes = append(processes, inspectSnapshotEntry(entry, hashCache))
 
 		err := syscall.Process32Next(snapshot, &entry)
 		if err == nil {
@@ -143,7 +147,10 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	return processes, nil
 }
 
-func inspectSnapshotEntry(entry syscall.ProcessEntry32) ProcessSnapshotEntry {
+func inspectSnapshotEntry(
+	entry syscall.ProcessEntry32,
+	hashCache *executableHashCache,
+) ProcessSnapshotEntry {
 	process := ProcessSnapshotEntry{
 		PID:       entry.ProcessID,
 		ParentPID: entry.ParentProcessID,
@@ -155,6 +162,13 @@ func inspectSnapshotEntry(entry syscall.ProcessEntry32) ProcessSnapshotEntry {
 		process.PathError = err
 	} else {
 		process.ExecutablePath = executablePath
+
+		executableSHA256, hashErr := hashCache.SHA256(executablePath)
+		if hashErr != nil {
+			process.HashError = hashErr
+		} else {
+			process.ExecutableSHA256 = executableSHA256
+		}
 	}
 
 	securityContext, err := securityContextForPID(entry.ProcessID)
