@@ -48,3 +48,41 @@ func TestExecutableFileIdentityStableForSameFile(t *testing.T) {
 		t.Fatalf("file identity changed: first %#v, second %#v", first, second)
 	}
 }
+
+func TestExecutableFileStateChangesWhenFileContentChanges(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sample.exe")
+	if err := os.WriteFile(path, []byte("one"), 0o600); err != nil {
+		t.Fatalf("write initial test file: %v", err)
+	}
+
+	before, err := executableFileState(path)
+	if err != nil {
+		t.Fatalf("query initial file state: %v", err)
+	}
+
+	if err := os.WriteFile(path, []byte("changed content"), 0o600); err != nil {
+		t.Fatalf("write changed test file: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat changed file: %v", err)
+	}
+
+	if err := os.Chtimes(
+		path,
+		info.ModTime().AddDate(0, 0, 1),
+		info.ModTime().AddDate(0, 0, 1),
+	); err != nil {
+		t.Fatalf("change test file modification time: %v", err)
+	}
+
+	after, err := executableFileState(path)
+	if err != nil {
+		t.Fatalf("query changed file state: %v", err)
+	}
+
+	if before == after {
+		t.Fatal("file state did not change after file content changed")
+	}
+}
