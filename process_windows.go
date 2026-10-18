@@ -7,11 +7,14 @@ import (
 	"unsafe"
 )
 
+const processQueryLimitedInformation = 0x1000
+
 var (
 	kernel32 = syscall.NewLazyDLL("kernel32.dll")
 
 	procGetCurrentProcessID       = kernel32.NewProc("GetCurrentProcessId")
 	procGetCurrentProcess         = kernel32.NewProc("GetCurrentProcess")
+	procOpenProcess               = kernel32.NewProc("OpenProcess")
 	procQueryFullProcessImageName = kernel32.NewProc("QueryFullProcessImageNameW")
 )
 
@@ -21,9 +24,11 @@ type ProcessInfo struct {
 }
 
 type ProcessSnapshotEntry struct {
-	PID       uint32
-	ParentPID uint32
-	Name      string
+	PID            uint32
+	ParentPID      uint32
+	Name           string
+	ExecutablePath string
+	PathError      error
 }
 
 func inspectCurrentProcess() (ProcessInfo, error) {
@@ -105,11 +110,7 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	}
 
 	for {
-		processes = append(processes, ProcessSnapshotEntry{
-			PID:       entry.ProcessID,
-			ParentPID: entry.ParentProcessID,
-			Name:      syscall.UTF16ToString(entry.ExeFile[:]),
-		})
+		processes = append(processes, inspectSnapshotEntry(entry))
 
 		err := syscall.Process32Next(snapshot, &entry)
 		if err == nil {
@@ -124,4 +125,60 @@ func enumerateProcesses() (processes []ProcessSnapshotEntry, err error) {
 	}
 
 	return processes, nil
+}
+
+func inspectSnapshotEntry(entry syscall.ProcessEntry32) ProcessSnapshotEntry {
+	process := ProcessSnapshotEntry{
+		PID:       entry.ProcessID,
+		ParentPID: entry.ParentProcessID,
+		Name:      syscall.UTF16ToString(entry.ExeFile[:]),
+	}
+
+	executablePath, err := executablePathForPID(entry.ProcessID)
+	if err != nil {
+		process.PathError = err
+		return process
+	}
+
+	process.ExecutablePath = executablePath
+	return process
+}
+
+func executablePathForPID(pid uint32) (path string, err error) {
+	handle, err := openProcessForQuery(pid)
+	if err != nil {
+		return "", fmt.Errorf("open process %d: %w", pid, err)
+	}
+
+	defer func() {
+		closeErr := syscall.CloseHandle(handle)
+		if err == nil && closeErr != nil {
+			err = fmt.Errorf("close process %d handle: %w", pid, closeErr)
+		}
+	}()
+
+	path, err = processExecutablePath(handle)
+	if err != nil {
+		return "", fmt.Errorf("query process %d executable path: %w", pid, err)
+	}
+
+	return path, nil
+}
+
+func openProcessForQuery(pid uint32) (syscall.Handle, error) {
+	result, _, callErr := procOpenProcess.Call(
+		processQueryLimitedInformation,
+		0,
+		uintptr(pid),
+	)
+
+	if result == 0 {
+		if callErr == syscall.Errno(0) {
+			return 0, errors.New("OpenProcess failed")
+		}
+
+		return 0, callErr
+	}
+
+	return syscall.Handle(result), nil
 }

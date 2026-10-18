@@ -34,7 +34,9 @@ WindoNetBlock can currently:
 
 - inspect its own process ID and executable path;
 - take a Windows process snapshot;
-- enumerate current process IDs, parent process IDs, and executable names.
+- enumerate current process IDs, parent process IDs, and executable names;
+- resolve full executable paths where Windows permits access;
+- preserve process snapshot information when executable-path inspection is unavailable.
 
 This is observation only.
 

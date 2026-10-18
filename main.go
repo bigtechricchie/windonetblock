@@ -28,15 +28,20 @@ func main() {
 
 	fmt.Printf("Running processes: %d\n", len(processes))
 	fmt.Println()
-	fmt.Printf("%-8s %-8s %s\n", "PID", "PPID", "NAME")
-	fmt.Printf("%-8s %-8s %s\n", "---", "----", "----")
 
 	for _, process := range processes {
 		fmt.Printf(
-			"%-8d %-8d %s\n",
+			"PID: %d | PPID: %d | %s\n",
 			process.PID,
 			process.ParentPID,
 			process.Name,
 		)
+
+		if process.PathError != nil {
+			fmt.Printf("  Path: <unavailable: %v>\n", process.PathError)
+			continue
+		}
+
+		fmt.Printf("  Path: %s\n", process.ExecutablePath)
 	}
 }
