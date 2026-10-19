@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -20,6 +21,7 @@ var (
 
 type ProcessInfo struct {
 	PID              uint32
+	CreationTime     time.Time
 	ExecutablePath   string
 	FileIdentity     ExecutableFileIdentity
 	ExecutableSHA256 string
@@ -31,6 +33,8 @@ type ProcessSnapshotEntry struct {
 	PID              uint32
 	ParentPID        uint32
 	Name             string
+	CreationTime     time.Time
+	TimingError      error
 	ExecutablePath   string
 	PathError        error
 	FileIdentity     ExecutableFileIdentity
@@ -46,6 +50,11 @@ type ProcessSnapshotEntry struct {
 func inspectCurrentProcess() (ProcessInfo, error) {
 	pid := currentProcessID()
 	handle := currentProcessHandle()
+
+	creationTime, err := processCreationTime(handle)
+	if err != nil {
+		return ProcessInfo{}, fmt.Errorf("query process creation time: %w", err)
+	}
 
 	executablePath, err := processExecutablePath(handle)
 	if err != nil {
@@ -74,6 +83,7 @@ func inspectCurrentProcess() (ProcessInfo, error) {
 
 	return ProcessInfo{
 		PID:              pid,
+		CreationTime:     creationTime,
 		ExecutablePath:   executablePath,
 		FileIdentity:     fileIdentity,
 		ExecutableSHA256: executableSHA256,
@@ -178,6 +188,13 @@ func inspectSnapshotEntry(
 		PID:       entry.ProcessID,
 		ParentPID: entry.ParentProcessID,
 		Name:      syscall.UTF16ToString(entry.ExeFile[:]),
+	}
+
+	creationTime, err := processCreationTimeForPID(entry.ProcessID)
+	if err != nil {
+		process.TimingError = err
+	} else {
+		process.CreationTime = creationTime
 	}
 
 	executablePath, err := executablePathForPID(entry.ProcessID)
