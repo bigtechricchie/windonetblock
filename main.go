@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 )
 
 func main() {
@@ -18,6 +19,10 @@ func main() {
 	fmt.Println("Current process")
 	fmt.Println("---------------")
 	fmt.Printf("PID: %d\n", currentProcess.PID)
+	fmt.Printf(
+		"Created: %s\n",
+		currentProcess.CreationTime.Format(time.RFC3339Nano),
+	)
 	fmt.Printf("Executable: %s\n", currentProcess.ExecutablePath)
 	fmt.Printf("File identity: %s\n", currentProcess.FileIdentity)
 	fmt.Printf("SHA-256: %s\n", currentProcess.ExecutableSHA256)
@@ -54,6 +59,15 @@ func main() {
 			process.ParentPID,
 			process.Name,
 		)
+
+		if process.TimingError != nil {
+			fmt.Printf("  Created: <unavailable: %v>\n", process.TimingError)
+		} else if !process.CreationTime.IsZero() {
+			fmt.Printf(
+				"  Created: %s\n",
+				process.CreationTime.Format(time.RFC3339Nano),
+			)
+		}
 
 		if process.PathError != nil {
 			fmt.Printf("  Path: <unavailable: %v>\n", process.PathError)

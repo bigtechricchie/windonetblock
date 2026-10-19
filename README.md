@@ -32,13 +32,13 @@ A valid digital signature does not prove that software is safe, and unsigned sof
 
 WindoNetBlock can currently:
 
-- inspect its own process ID and executable path;
+- inspect its own process ID, creation time, and executable path;
 - retrieve a Windows file identity for its current executable using the volume serial number and 128-bit file ID;
 - calculate a SHA-256 digest for the file currently found at its observed executable path;
 - verify the current executable with the Windows Authenticode policy provider without network retrieval;
 - inspect its current Windows user SID, account name, and mandatory integrity level;
 - take a Windows process snapshot;
-- enumerate current process IDs, parent process IDs, and executable names;
+- enumerate current process IDs, parent process IDs, executable names, and creation times where Windows permits access;
 - resolve full executable paths where Windows permits access;
 - retrieve per-process Windows file identity where the executable file is accessible;
 - calculate per-process executable SHA-256 evidence where the executable file is readable;
@@ -46,9 +46,11 @@ WindoNetBlock can currently:
 - verify per-process executable Authenticode status where the executable file is accessible;
 - reuse Authenticode evidence within a single snapshot when Windows file identity, file size, and last-write time are unchanged;
 - inspect per-process user SID, account name, and mandatory integrity level where Windows permits access;
-- preserve process snapshot information when path, identity, hash, signature, or security-context inspection is unavailable.
+- preserve process snapshot information when timing, path, identity, hash, signature, or security-context inspection is unavailable.
 
 This is observation only.
+
+A process ID is not treated as a durable process-instance identity. Windows can reuse PIDs after processes exit. The observed process creation time provides an additional discriminator so future lifecycle correlation can use the pair of process ID and creation time rather than PID alone.
 
 A Windows file identity is represented by the volume serial number and 128-bit file ID returned by `GetFileInformationByHandleEx` with `FileIdInfo`. This distinguishes the underlying file from its path and provides a stronger identity primitive for cache and future policy work.
 
